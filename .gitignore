@@ -1,0 +1,41 @@
+# === Dokumen Spesifikasi Kampus (Rahasia) ===
+*.pdf
+01-laporan-skpl-siklus.pdf
+02-laporan-erd-siklus.pdf
+03-laporan-use-case-siklus.pdf
+04-laporan-class-diagram-siklus.pdf
+05-laporan-activity-diagram-siklus.pdf
+06-presentasi-proyek-siklus.pdf
+
+# === Database SQLite Lokal & Temporary Files ===
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+database/*.db
+
+# === Python Cache & Environment ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+venv/
+
+# === Go Build Executables ===
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+tester/*.exe
+main.exe
+
+# === IDE, OS, & Logs ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
