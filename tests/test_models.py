@@ -1,4 +1,4 @@
-"""
+﻿"""
 =============================================================================
 SIKLUS ML - Unit Test Suite
 =============================================================================
@@ -18,6 +18,7 @@ from models.explainable_risk_analyzer import ExplainableRiskAnalyzer
 from models.federated_aggregator import FederatedAggregator
 from models.bbt_cusum_detector import BBTCusumDetector
 from models.cycle_regularity_classifier import CycleRegularityClassifier
+from models.circadian_cycle_predictor import CircadianCyclePredictor
 from utils.scaler import ZScoreScaler
 from utils.blob_serializer import BlobSerializer
 from utils.feature_engineering import FeatureEngineer
@@ -435,6 +436,43 @@ def test_cycle_regularity_classifier():
 #  MAIN: Jalankan seluruh test
 # ═══════════════════════════════════════════════════════════════════════════
 
+
+
+# --- Test 10: Circadian Cycle Predictor ----------------------------------
+
+def test_circadian_cycle_predictor():
+    test_separator("Circadian Cycle Predictor (H3 - Desinkronisasi Sirkadian)")
+
+    model = CircadianCyclePredictor()
+
+    means = [22.5, 6.585, 48.175, 0.135, 1.231, 1.25, 0.65]
+    stds  = [1.624, 1.382, 23.131, 1.022, 0.992, 0.42, 0.31]
+    weights = [19.2178, 0.3243, -0.0072, 1.0142, 0.1542, -0.4120, -0.2850, -0.099]
+
+    scaler = ZScoreScaler()
+    scaler.set_params(means, stds)
+    model.set_weights(weights)
+
+    raw_high_sjl = [28.0, 5.5, 70.0, 0.5, 2.0, 2.1, 1.3]
+    scaled = scaler.transform([raw_high_sjl])[0]
+    res = model.predict_circadian(scaled)
+
+    print(f"  Prediksi durasi  : {res['predicted_duration_days']} hari")
+    print(f"  Hari ovulasi     : ke-{res['ovulation_day_from_start']}")
+    print(f"  SJL              : {res['sjl_hours']} jam")
+    print(f"  Sigma Tmid       : {res['sigma_tmid']}")
+    print(f"  Risiko desinkroni: {res['desync_risk']}")
+
+    assert res["desync_risk"] == "TINGGI", "SJL 2.1 & sigma_tmid 1.3 seharusnya TINGGI"
+    assert 5 < res["predicted_duration_days"] < 55, "Prediksi durasi di luar rentang wajar"
+    print("  OK Prediksi circadian dengan SJL tinggi OK")
+
+    raw_low_sjl = [28.0, 7.5, 30.0, 0.0, 1.0, 0.5, 0.3]
+    scaled2 = scaler.transform([raw_low_sjl])[0]
+    res2 = model.predict_circadian(scaled2)
+    print(f"  SJL rendah - Risiko desinkroni: {res2['desync_risk']}")
+    assert res2["desync_risk"] == "RENDAH", "SJL 0.5 & sigma_tmid 0.3 seharusnya RENDAH"
+    print("  OK Prediksi circadian dengan SJL rendah OK")
 if __name__ == "__main__":
     print("╔══════════════════════════════════════════════════════════════╗")
     print("║       SIKLUS ML Models — Full Test Suite                   ║")
@@ -450,6 +488,7 @@ if __name__ == "__main__":
         ("Federated Aggregator", test_federated_aggregator),
         ("BBT CUSUM Detector", test_bbt_cusum_detector),
         ("Cycle Regularity Classifier", test_cycle_regularity_classifier),
+        ("Circadian Cycle Predictor", test_circadian_cycle_predictor),
     ]
 
     passed = 0

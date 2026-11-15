@@ -90,3 +90,4 @@ class BBTCusumDetector:
                 else "Belum terdeteksi lonjakan suhu signifikan (fase anovulatoar atau belum ovulasi)"
             ),
         }
+

@@ -10,6 +10,7 @@ from models.gwg_spline_tracker import GWGSplineTracker
 from models.explainable_risk_analyzer import ExplainableRiskAnalyzer
 from models.bbt_cusum_detector import BBTCusumDetector
 from models.cycle_regularity_classifier import CycleRegularityClassifier
+from models.circadian_cycle_predictor import CircadianCyclePredictor
 from utils.scaler import ZScoreScaler
 
 def main():
@@ -122,6 +123,33 @@ def main():
         prob = res["probability"]
         code = res["risk_code"]
         print(f"{prob:.4f} {code}")
+
+    elif mode == 7:
+        prev_dur = float(tokens[idx])
+        sleep = float(tokens[idx + 1])
+        stress = float(tokens[idx + 2])
+        delta_bmi = float(tokens[idx + 3])
+        junk = float(tokens[idx + 4])
+        sjl = float(tokens[idx + 5])
+        sigma_tmid = float(tokens[idx + 6])
+
+        means = [22.5, 6.585, 48.175, 0.135, 1.231, 1.25, 0.65]
+        stds = [1.624, 1.382, 23.131, 1.022, 0.992, 0.42, 0.31]
+        weights = [19.2178, 0.3243, -0.0072, 1.0142, 0.1542, -0.4120, -0.2850, -0.099]
+
+        scaler = ZScoreScaler()
+        scaler.set_params(means, stds)
+        scaled = scaler.transform([[prev_dur, sleep, stress, delta_bmi, junk, sjl, sigma_tmid]])[0]
+
+        model = CircadianCyclePredictor()
+        model.set_weights(weights)
+        res = model.predict_circadian(scaled)
+
+        dur = res["predicted_duration_days"]
+        ovul = res["ovulation_day_from_start"]
+        f_start, f_end = res["fertile_window_days"]
+        desync = res["desync_risk"]
+        print(f"{dur:.2f} {ovul} {f_start} {f_end} {desync}")
 
 if __name__ == "__main__":
     main()

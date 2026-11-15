@@ -108,6 +108,15 @@ class DatabaseManager:
                ORDER BY tanggal_mulai DESC LIMIT ?""", (limit,)
         )
 
+    def get_bbt_history(self, limit: int = 30) -> List[float]:
+        """Ambil riwayat suhu basal tubuh (BBT) harian untuk analisis CUSUM."""
+        rows = self.fetch_all(
+            """SELECT suhu_basal FROM catatan_fisik_mood
+               WHERE suhu_basal IS NOT NULL
+               ORDER BY tanggal ASC LIMIT ?""", (limit,)
+        )
+        return [float(r["suhu_basal"]) for r in rows]
+
     def get_daily_aggregates(self, start_date: str,
                              end_date: str) -> List[Dict]:
         """Ambil agregat harian gabungan tidur, stres, dan asupan."""

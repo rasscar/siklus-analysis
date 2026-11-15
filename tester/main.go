@@ -366,7 +366,56 @@ func main() {
 				fmt.Fprintf(w, "  Dapat: p=%.4f code=%d | Harap: p=%.4f code=%d\n", actProb, actCode, expProb, expCode)
 				jumGagal = jumGagal + 1
 			}
+		} else if mode == 7 {
+		var prevDur, sleep, stress, deltaBmi, junk, sjl, sigmaTmid float64
+		var expDur float64
+		var expOvul, expStart, expEnd int
+		var expDesync string
+
+		fmt.Fscan(r, &prevDur, &sleep, &stress, &deltaBmi, &junk, &sjl, &sigmaTmid)
+		fmt.Fscan(r, &expDur, &expOvul, &expStart, &expEnd, &expDesync)
+
+		var inputStr string
+		inputStr = fmt.Sprintf("7 %f %f %f %f %f %f %f", prevDur, sleep, stress, deltaBmi, junk, sjl, sigmaTmid)
+
+		var cmd *exec.Cmd
+		cmd = exec.Command("python", "engine.py")
+		cmd.Stdin = strings.NewReader(inputStr)
+
+		var outBytes []byte
+		outBytes, errBaca = cmd.Output()
+		if errBaca != nil {
+			fmt.Fprintf(w, "Kasus #%d: [MODE 7] ERROR EKSEKUSI PYTHON\n", tc)
+			jumGagal = jumGagal + 1
+			continue
 		}
+
+		var actDur float64
+		var actOvul, actStart, actEnd int
+		var actDesync string
+		fmt.Sscan(string(outBytes), &actDur, &actOvul, &actStart, &actEnd, &actDesync)
+
+		var bedaDur float64
+		bedaDur = actDur - expDur
+		if bedaDur < 0 {
+			bedaDur = -bedaDur
+		}
+
+		if bedaDur <= 0.5 && actOvul == expOvul && actDesync == expDesync {
+			con = true
+		}
+
+		if con {
+			fmt.Fprintf(w, "Kasus #%d: [MODE 7 - CIRCADIAN PREDICTOR] LOLOS\n", tc)
+			fmt.Fprintf(w, "  Prediksi: %.2f hari | Ovulasi: hari ke-%d | Subur: (%d-%d) | Desinkronisasi: %s\n", actDur, actOvul, actStart, actEnd, actDesync)
+			jumLolos = jumLolos + 1
+		} else {
+			fmt.Fprintf(w, "Kasus #%d: [MODE 7 - CIRCADIAN PREDICTOR] GAGAL\n", tc)
+			fmt.Fprintf(w, "  Dapat: dur=%.2f ovul=%d desync=%s\n", actDur, actOvul, actDesync)
+			fmt.Fprintf(w, "  Harap: dur=%.2f ovul=%d desync=%s\n", expDur, expOvul, expDesync)
+			jumGagal = jumGagal + 1
+		}
+	}
 	}
 
 	w.WriteString("------------------------------------------------------------\n")
@@ -375,4 +424,5 @@ func main() {
 	w.WriteString("Lolos      : " + strconv.Itoa(jumLolos) + "\n")
 	w.WriteString("Gagal      : " + strconv.Itoa(jumGagal) + "\n")
 	w.WriteString("============================================================\n")
+
 }

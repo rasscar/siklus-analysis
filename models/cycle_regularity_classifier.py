@@ -90,3 +90,4 @@ class CycleRegularityClassifier:
                 "sugar_factor": round(self.w_gula * sugar_weekly_freq, 3),
             },
         }
+
