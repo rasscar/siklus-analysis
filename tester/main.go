@@ -247,6 +247,125 @@ func main() {
 				fmt.Fprintf(w, "  Harap: risiko=%d faktor=%s\n", expRisk, expFactor)
 				jumGagal = jumGagal + 1
 			}
+
+		} else if mode == 5 {
+			var numDays, i int
+			var expConf, expOvul int
+			var expDelta float64
+
+			fmt.Fscan(r, &numDays)
+			var suhuArr []float64
+			suhuArr = make([]float64, numDays)
+			for i = 0; i < numDays; i++ {
+				fmt.Fscan(r, &suhuArr[i])
+			}
+			fmt.Fscan(r, &expConf, &expOvul, &expDelta)
+
+			var sb strings.Builder
+			sb.WriteString("5 ")
+			sb.WriteString(strconv.Itoa(numDays))
+			for i = 0; i < numDays; i++ {
+				sb.WriteString(" ")
+				sb.WriteString(fmt.Sprintf("%f", suhuArr[i]))
+			}
+
+			var cmd *exec.Cmd
+			cmd = exec.Command("python", "engine.py")
+			cmd.Stdin = strings.NewReader(sb.String())
+
+			var outBytes []byte
+			outBytes, errBaca = cmd.Output()
+			if errBaca != nil {
+				fmt.Fprintf(w, "Kasus #%d: [MODE 5] ERROR EKSEKUSI PYTHON\n", tc)
+				jumGagal = jumGagal + 1
+				continue
+			}
+
+			var actConf, actOvul int
+			var actDelta float64
+			fmt.Sscan(string(outBytes), &actConf, &actOvul, &actDelta)
+
+			var bedaDelta float64
+			bedaDelta = actDelta - expDelta
+			if bedaDelta < 0 {
+				bedaDelta = -bedaDelta
+			}
+
+			if actConf == expConf && actOvul == expOvul && bedaDelta <= 0.05 {
+				con = true
+			}
+
+			if con {
+				var statusOvul string
+				if actConf == 1 {
+					statusOvul = "OVULASI TERKONFIRMASI"
+				} else {
+					statusOvul = "BELUM TERKONFIRMASI"
+				}
+				fmt.Fprintf(w, "Kasus #%d: [MODE 5 - BBT CUSUM] LOLOS\n", tc)
+				fmt.Fprintf(w, "  Status: %s | Hari ke-%d | Lonjakan: %+.2f C\n", statusOvul, actOvul, actDelta)
+				jumLolos = jumLolos + 1
+			} else {
+				fmt.Fprintf(w, "Kasus #%d: [MODE 5 - BBT CUSUM] GAGAL\n", tc)
+				fmt.Fprintf(w, "  Dapat: conf=%d ovul=%d delta=%.2f\n", actConf, actOvul, actDelta)
+				fmt.Fprintf(w, "  Harap: conf=%d ovul=%d delta=%.2f\n", expConf, expOvul, expDelta)
+				jumGagal = jumGagal + 1
+			}
+
+		} else if mode == 6 {
+			var diet, stress, sleep, sugar float64
+			var expProb float64
+			var expCode int
+
+			fmt.Fscan(r, &diet, &stress, &sleep, &sugar)
+			fmt.Fscan(r, &expProb, &expCode)
+
+			var inputStr string
+			inputStr = fmt.Sprintf("6 %f %f %f %f", diet, stress, sleep, sugar)
+
+			var cmd *exec.Cmd
+			cmd = exec.Command("python", "engine.py")
+			cmd.Stdin = strings.NewReader(inputStr)
+
+			var outBytes []byte
+			outBytes, errBaca = cmd.Output()
+			if errBaca != nil {
+				fmt.Fprintf(w, "Kasus #%d: [MODE 6] ERROR EKSEKUSI PYTHON\n", tc)
+				jumGagal = jumGagal + 1
+				continue
+			}
+
+			var actProb float64
+			var actCode int
+			fmt.Sscan(string(outBytes), &actProb, &actCode)
+
+			var bedaProb float64
+			bedaProb = actProb - expProb
+			if bedaProb < 0 {
+				bedaProb = -bedaProb
+			}
+
+			if bedaProb <= 0.05 && actCode == expCode {
+				con = true
+			}
+
+			if con {
+				var labelStatus string
+				if actCode == 0 {
+					labelStatus = "RENDAH (NORMAL)"
+				} else if actCode == 1 {
+					labelStatus = "SEDANG (WASPADA)"
+				} else {
+					labelStatus = "TINGGI (RESIKO OLIGOMENOREA)"
+				}
+				fmt.Fprintf(w, "Kasus #%d: [MODE 6 - REGULARITY RISK] LOLOS\n", tc)
+				fmt.Fprintf(w, "  Peluang Risiko: %.4f | Klasifikasi: %s\n", actProb, labelStatus)
+				jumLolos = jumLolos + 1
+			} else {
+				fmt.Fprintf(w, "Kasus #%d: [MODE 6 - REGULARITY RISK] GAGAL\n", tc)
+				fmt.Fprintf(w, "  Dapat: p=%.4f code=%d | Harap: p=%.4f code=%d\n", actProb, actCode, expProb, expCode)
+				jumGagal = jumGagal + 1
+			}
 		}
 	}
 
@@ -257,4 +376,3 @@ func main() {
 	w.WriteString("Gagal      : " + strconv.Itoa(jumGagal) + "\n")
 	w.WriteString("============================================================\n")
 }
-

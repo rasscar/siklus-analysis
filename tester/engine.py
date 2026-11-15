@@ -8,6 +8,8 @@ from models.ridge_cycle_predictor import RidgeCyclePredictor
 from models.logistic_peak_time import LogisticPeakTime
 from models.gwg_spline_tracker import GWGSplineTracker
 from models.explainable_risk_analyzer import ExplainableRiskAnalyzer
+from models.bbt_cusum_detector import BBTCusumDetector
+from models.cycle_regularity_classifier import CycleRegularityClassifier
 from utils.scaler import ZScoreScaler
 
 def main():
@@ -99,6 +101,27 @@ def main():
         top_delta = top["delta_y_days"]
         print(f"{risk_code} {top_name} {top_delta:.2f}")
 
+    elif mode == 5:
+        num_days = int(tokens[idx])
+        idx += 1
+        temps = [float(tokens[idx + d]) for d in range(num_days)]
+        detector = BBTCusumDetector()
+        res = detector.detect_ovulation(temps)
+        conf = 1 if res["confirmed"] else 0
+        ovul = res["ovulation_day"]
+        delta = res["temperature_delta"]
+        print(f"{conf} {ovul} {delta:.2f}")
+
+    elif mode == 6:
+        diet = float(tokens[idx])
+        stress = float(tokens[idx + 1])
+        sleep = float(tokens[idx + 2])
+        sugar = float(tokens[idx + 3])
+        classifier = CycleRegularityClassifier()
+        res = classifier.evaluate_risk(diet, stress, sleep, sugar)
+        prob = res["probability"]
+        code = res["risk_code"]
+        print(f"{prob:.4f} {code}")
+
 if __name__ == "__main__":
     main()
-

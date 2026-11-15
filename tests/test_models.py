@@ -16,6 +16,8 @@ from models.logistic_peak_time import LogisticPeakTime
 from models.gwg_spline_tracker import GWGSplineTracker
 from models.explainable_risk_analyzer import ExplainableRiskAnalyzer
 from models.federated_aggregator import FederatedAggregator
+from models.bbt_cusum_detector import BBTCusumDetector
+from models.cycle_regularity_classifier import CycleRegularityClassifier
 from utils.scaler import ZScoreScaler
 from utils.blob_serializer import BlobSerializer
 from utils.feature_engineering import FeatureEngineer
@@ -379,6 +381,56 @@ def test_zscale_scaler():
     print("  ✅ Scaled stds ≈ 1")
 
 
+# ─── Test 8: BBT CUSUM Detector ──────────────────────────────────────────
+
+def test_bbt_cusum_detector():
+    test_separator("BBT CUSUM Detector (Termoregulasi Ovulasi)")
+
+    detector = BBTCusumDetector(shift_threshold=0.30, min_sustained_days=3)
+
+    # Deret suhu folikuler (36.2°C) diikuti lonjakan luteal (36.65°C - 36.70°C)
+    temps = [36.20, 36.25, 36.20, 36.18, 36.22, 36.20, 36.60, 36.65, 36.70, 36.68]
+    res = detector.detect_ovulation(temps, baseline_days=6)
+
+    print(f"  Konfirmasi Ovulasi: {res['confirmed']}")
+    print(f"  Hari Ovulasi      : hari ke-{res['ovulation_day']}")
+    print(f"  Lonjakan Suhu     : +{res['temperature_delta']}°C")
+    print(f"  Pesan             : {res['message']}")
+
+    assert res["confirmed"] is True, "Ovulasi seharusnya terkonfirmasi"
+    assert res["ovulation_day"] == 6, f"Hari ovulasi seharusnya 6, didapat {res['ovulation_day']}"
+    assert res["temperature_delta"] >= 0.30, "Lonjakan suhu harus >= 0.30°C"
+    print("  ✅ Deteksi lonjakan suhu ovulasi terverifikasi")
+
+
+# ─── Test 9: Cycle Regularity Classifier ──────────────────────────────────
+
+def test_cycle_regularity_classifier():
+    test_separator("Cycle Regularity Classifier (Multi-Factor Risk)")
+
+    classifier = CycleRegularityClassifier()
+
+    # Kasus beresiko tinggi: diet tidak teratur (1.0), stres tinggi (75), kurang tidur (5.5 jam), minuman manis (3x)
+    high_risk = classifier.evaluate_risk(
+        diet_unbalanced=1.0, stress_score=75.0, sleep_hours=5.5, sugar_weekly_freq=3.0
+    )
+    print(f"  Kasus Risiko Tinggi: P={high_risk['probability']:.4f} | Kode={high_risk['risk_code']}")
+    print(f"  Label              : {high_risk['risk_label']}")
+    assert high_risk["risk_code"] == 2, "Seharusnya beresiko tinggi"
+    assert high_risk["probability"] >= 0.65, "Probabilitas seharusnya >= 0.65"
+    print("  ✅ Evaluasi risiko tinggi OK")
+
+    # Kasus sehat: diet teratur (0.0), stres rendah (25), tidur cukup (7.5 jam), tanpa gula (0x)
+    low_risk = classifier.evaluate_risk(
+        diet_unbalanced=0.0, stress_score=25.0, sleep_hours=7.5, sugar_weekly_freq=0.0
+    )
+    print(f"  Kasus Sehat/Normal : P={low_risk['probability']:.4f} | Kode={low_risk['risk_code']}")
+    print(f"  Label              : {low_risk['risk_label']}")
+    assert low_risk["risk_code"] == 0, "Seharusnya beresiko rendah/normal"
+    assert low_risk["probability"] < 0.40, "Probabilitas seharusnya < 0.40"
+    print("  ✅ Evaluasi risiko normal OK")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  MAIN: Jalankan seluruh test
 # ═══════════════════════════════════════════════════════════════════════════
@@ -396,6 +448,8 @@ if __name__ == "__main__":
         ("GWG Spline Tracker", test_gwg_spline_tracker),
         ("Explainable Risk Analyzer", test_explainable_risk),
         ("Federated Aggregator", test_federated_aggregator),
+        ("BBT CUSUM Detector", test_bbt_cusum_detector),
+        ("Cycle Regularity Classifier", test_cycle_regularity_classifier),
     ]
 
     passed = 0
